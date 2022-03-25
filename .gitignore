@@ -1,0 +1,6 @@
+/venv*/
+/output/
+/data/
+__pycache__
+*.swp
+.DS_Store
