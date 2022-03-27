@@ -12,13 +12,15 @@ import os
 import faiss
 import numpy as np
 import pandas as pd
-from classy_vision.dataset.transforms import build_transforms
 
 from lib import initialize  # noqa
 from lib.inference import Inference
 from sscd.datasets.copydays import Copydays
 from sscd.datasets.image_folder import ImageFolder
 from sscd.lib.util import parse_bool
+
+# After initialize import to silence an error.
+from classy_vision.dataset.transforms import build_transforms
 
 parser = argparse.ArgumentParser()
 inference_parser = parser.add_argument_group("Inference")
@@ -69,17 +71,6 @@ def get_transforms(size, preserve_aspect_ratio, resize_long_edge):
             },
         ]
     )
-
-
-def set_faiss_epsilons(faiss_index, eps=1e-8):
-    faiss_index = faiss.downcast_index(faiss_index)
-    if isinstance(faiss_index, faiss.IndexPreTransform):
-        for i in range(faiss_index.chain.size()):
-            vt = faiss_index.chain.at(i)
-            vt = faiss.downcast_VectorTransform(vt)
-            if isinstance(vt, faiss.PCAMatrix):
-                pass
-            assert False  # faiss version with whitening epsilons not released
 
 
 def evaluate(

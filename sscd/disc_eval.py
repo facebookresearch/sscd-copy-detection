@@ -20,7 +20,7 @@ import pandas as pd
 
 from lib import initialize  # noqa
 from lib.inference import Inference
-from sscd.train import SSCD, DISCData
+from sscd.train import DISCData
 from sscd.datasets.disc import DISCEvalDataset
 
 parser = argparse.ArgumentParser()
@@ -32,7 +32,7 @@ disc_parser.add_argument("--disc_path", required=True)
 disc_parser.add_argument(
     "--codecs",
     default=None,
-    help="FAISS codecs for postprocessing embeddings as ';' separated strings"
+    help="FAISS codecs for postprocessing embeddings as ';' separated strings "
     "in index_factory format",
 )
 disc_parser.add_argument(
