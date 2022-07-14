@@ -230,7 +230,7 @@ For information on how to train SSCD models, see
 
 ## License
 
-The SSCD codebase uses the [CC-NC 4.0 International license](LICENSE).
+The SSCD codebase uses the [MIT license](LICENSE).
 
 ## Citation
 
