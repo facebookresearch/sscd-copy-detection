@@ -22,6 +22,7 @@ from lib import initialize  # noqa
 from lib.inference import Inference
 from sscd.train import DISCData
 from sscd.datasets.disc import DISCEvalDataset
+from sscd.lib.util import parse_bool
 
 parser = argparse.ArgumentParser()
 inference_parser = parser.add_argument_group("Inference")
@@ -40,6 +41,13 @@ disc_parser.add_argument(
     default="1.0[0,2]",
     help="Score normalization settings, ';' separated, in format: "
     "<weight>[<first index>,<last index>]",
+)
+disc_parser.add_argument("--k", default=10, type=int)
+disc_parser.add_argument(
+    "--global_candidates",
+    default=False,
+    type=parse_bool,
+    help="Use a global set of KNN candidates, instead of k per query. Uses CPU KNN.",
 )
 disc_parser.add_argument("--metadata", help="Metadata column to put in the result CSV")
 
@@ -127,7 +135,7 @@ def dataset_split(outputs, split_id) -> Embeddings:
     return Embeddings(ids=image_num, embeddings=embeddings)
 
 
-def evaluate_all(dataset, outputs, codecs_arg, score_norm_arg):
+def evaluate_all(dataset, outputs, codecs_arg, score_norm_arg, **kwargs):
     embeddings = outputs["embeddings"]
     codecs = get_codecs(embeddings.shape[1], is_l2_normalized(embeddings), codecs_arg)
     logger.info("Using codecs: %s", codecs)
@@ -150,7 +158,9 @@ def evaluate_all(dataset, outputs, codecs_arg, score_norm_arg):
     for score_norm in score_norms:
         for codec in codecs:
             record = dict(codec=codec, score_norm=str(score_norm))
-            metrics = evaluate(dataset, queries, refs, training, score_norm, codec)
+            metrics = evaluate(
+                dataset, queries, refs, training, score_norm, codec, **kwargs
+            )
             if metrics:
                 record.update(metrics)
                 all_metrics.append(record)
@@ -177,13 +187,14 @@ def evaluate(
     training: Embeddings,
     score_norm: Optional[ScoreNormalization],
     codec,
+    **kwargs,
 ):
     try:
         queries, refs, training = project(codec, queries, refs, training)
     except ProjectionError as e:
         logger.error(f"DISC eval {codec}: {e}")
         return None
-    eval_kwargs = {}
+    eval_kwargs = dict(kwargs)
     use_gpu = torch.cuda.is_available()
     if score_norm:
         queries, refs = apply_score_norm(
@@ -235,7 +246,10 @@ def main(args):
     )
     outputs = Inference.inference(args, dataset)
     logger.info("Retrieval eval")
-    records = evaluate_all(dataset, outputs, args.codecs, args.score_norm)
+    eval_options = dict(k=args.k, global_candidates=args.global_candidates)
+    records = evaluate_all(
+        dataset, outputs, args.codecs, args.score_norm, **eval_options
+    )
     df = pd.DataFrame(records)
     if args.metadata:
         df["metadata"] = args.metadata

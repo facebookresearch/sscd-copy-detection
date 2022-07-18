@@ -9,7 +9,10 @@ from typing import Callable, Dict, Optional
 from torchvision.datasets.folder import default_loader
 
 from sscd.datasets.image_folder import get_image_paths
-from sscd.datasets.isc.descriptor_matching import knn_match_and_make_predictions
+from sscd.datasets.isc.descriptor_matching import (
+    knn_match_and_make_predictions,
+    match_and_make_predictions,
+)
 from sscd.datasets.isc.io import read_ground_truth
 from sscd.datasets.isc.metrics import evaluate, Metrics
 
@@ -92,19 +95,32 @@ class DISCEvalDataset:
         ref_ids,
         ref_embeddings,
         use_gpu=False,
+        k=10,
+        global_candidates=False,
         **kwargs
     ) -> Dict[str, float]:
         query_names = ["Q%05d" % i for i in query_ids]
         ref_names = ["R%06d" % i for i in ref_ids]
-        predictions = knn_match_and_make_predictions(
-            query_embeddings,
-            query_names,
-            ref_embeddings,
-            ref_names,
-            10,
-            ngpu=-1 if use_gpu else 0,
-            **kwargs,
-        )
+        if global_candidates:
+            predictions = match_and_make_predictions(
+                query_embeddings,
+                query_names,
+                ref_embeddings,
+                ref_names,
+                num_results=k * len(query_names),
+                ngpu=-1 if use_gpu else 0,
+                **kwargs,
+            )
+        else:
+            predictions = knn_match_and_make_predictions(
+                query_embeddings,
+                query_names,
+                ref_embeddings,
+                ref_names,
+                k=k,
+                ngpu=-1 if use_gpu else 0,
+                **kwargs,
+            )
         results: Metrics = evaluate(self.gt, predictions)
         return {
             "uAP": results.average_precision,
